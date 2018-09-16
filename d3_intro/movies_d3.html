@@ -47,7 +47,6 @@
                 d3.select("#chart" + chart_id)
                     .selectAll("div.h-bar")
                     .sort(comparator)
-
         }
 
         // Comparators
@@ -109,7 +108,7 @@
 
             // Chart 4
             render(getBoxOfficeByGenre(json), 4, compareByBoxOffice, "Worldwide_Gross_M", "LightCoral", "Genre")
-        });
+        })
     </script>
 </body>
 </html>
