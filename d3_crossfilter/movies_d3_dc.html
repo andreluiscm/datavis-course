@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Bilheteira por Ano e Gênero</title>
+    <link rel="stylesheet" href="css/dc.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/crossfilter.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="js/dc.min.js"></script>
+
+</head>
+<body>
+    <div>
+      <h1>Bilheterias</h1>
+
+      <div>
+        <h2>Bilheteria por Ano</h2>
+        <div id="chartByYear" style="width:100%"></div>
+      </div>
+
+      <div>
+        <h2>Bilheteria por Gênero</h2>
+        <div id="chartByGenre"></div>
+      </div>
+    </div>
+
+    <script type="text/javascript">
+        let chartByYear = dc.barChart('#chartByYear');
+        let chartByGenre = dc.barChart('#chartByGenre');
+
+        d3.json("data/movies.json").then(function(data){
+            // formatando nossos dados
+            data.forEach(function(d) {
+                d.Year =  +d.Year;
+                d.Genre = d.Genre;
+                d.Worldwide_Gross_M = +d.Worldwide_Gross_M;
+            });
+
+            //criando um crossfilter
+            let facts = crossfilter(data);
+
+            let yearDim = facts.dimension(function(d){
+                return d.Year;
+            });
+
+            let genreDim = facts.dimension(function(d){
+                return d.Genre;
+            });
+
+            let grossByYearGroup = yearDim.group().reduceSum(function(d){
+                return d.Worldwide_Gross_M;
+            });
+
+            let grossByGenreGroup = genreDim.group().reduceSum(function(d){
+                return d.Worldwide_Gross_M;
+            });
+
+            let xScaleYear = d3.scaleOrdinal([yearDim.bottom(1)[0].Year, yearDim.top(1)[0].Year])
+            let xScaleGenre = d3.scaleOrdinal([genreDim.bottom(1)[0].Genre, yearDim.top(1)[0].Genre])
+
+            let maxGrossYear = grossByYearGroup.top(1)[0].value;
+            let maxGrossGenre = grossByGenreGroup.top(1)[0].value;
+
+            chartByYear.width(800)
+                     .height(400)
+                     .transitionDuration(2000)
+                     .margins({top: 50, right: 50, bottom: 50, left: 50})
+                     .dimension(yearDim)
+                     .group(grossByYearGroup)
+                     .x(xScaleYear)
+                     .xUnits(dc.units.ordinal)
+                     .renderHorizontalGridLines(true)
+                     .xAxisLabel('Ano')
+                     .yAxisLabel('Bilheteria')
+                     .renderLabel(true)
+                     .y(d3.scaleLinear().domain([0, (Math.floor(maxGrossYear / 1000) + 1) * 1000 + 500]))
+                     .colors(['#d8b365']);
+
+            chartByYear.yAxis().ticks(5);
+
+            chartByGenre.width(800)
+                     .height(400)
+                     .transitionDuration(2000)
+                     .margins({top: 50, right: 50, bottom: 50, left: 50})
+                     .dimension(yearDim)
+                     .group(grossByGenreGroup)
+                     .x(xScaleGenre)
+                     .xUnits(dc.units.ordinal)
+                     .renderHorizontalGridLines(true)
+                     .xAxisLabel('Gênero')
+                     .yAxisLabel('Bilheteria')
+                     .renderLabel(true)
+                     .y(d3.scaleLinear().domain([0, (Math.floor(maxGrossGenre / 1000) + 1) * 1000 + 500]))
+                     .colors(['#5ab4ac']);
+
+            chartByGenre.yAxis().ticks(5);
+
+            dc.renderAll();
+
+        });
+    </script>           
+</body>
+</html>
