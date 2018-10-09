@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+    <title> Chicago Data</title>
+
+    <!-- Custom styles for this template -->
+	<link rel="stylesheet" href="css/dc.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css" integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==" crossorigin=""/>
+    <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js" integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA==" crossorigin=""></script>
+    <script src="js/crossfilter.min.js"></script>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="js/dc.min.js"></script>
+</head>
+<body>
+  <main role="main" class="container">
+    <div class='row'>
+    	<div id="mapid" class="col-12">
+  		</div>
+  		<div class="col-12">
+		    <div id='bar-chart' class="col-6">
+		      <h4 style="margin-top: 15px"> # of Crimes by Type </h4>
+		    </div>
+		    <div id='series-chart'>
+			  <h4 style="margin-top: 15px"> # of Crimes by Type and Date </h4>
+		    </div>   
+	    </div>
+    </div>
+  </main>
+  <script type="text/javascript">
+  	let map = L.map('mapid').setView([41.881832,-87.623177], 9);
+	L.tileLayer("https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png", {
+		attribution: "Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL.",
+ 		maxZoom: 17
+	}).addTo(map);
+
+	// Create the dc.js chart objects & link to div
+	let barChart = dc.barChart('#bar-chart')
+	let seriesChart = dc.seriesChart('#series-chart')
+
+
+	let colorScale = d3.scaleOrdinal()
+		.domain(["HOMICIDE", "ROBBERY", "BURGLARY"])
+		.range(["#ca0020", "#0571b0", "#fdae61"]);
+	
+	// load data from a csv file
+	d3.csv("data/chicago_crimes_sep_2018.csv").then(function (data) {
+
+	  // format our data
+	  let formatDate = d3.utcParse("%m/%d/%Y %H:%M:%S %p")
+
+	  data.forEach(function(d) {
+	  	d.Date = formatDate(d.Date)
+	  	d.Type = d["Primary Type"]
+	  	d.Color = colorScale(d.Type)
+
+	  	let circle = L.circle([d.Latitude, d.Longitude], 100, {
+			color: d.Color,
+			weight: 2,
+		 	fillColor: d.Color,
+		 	fillOpacity: 0.5
+	 	}).addTo(map);
+
+		circle.bindPopup("Primary Type: " + d.Type + "<br />Date: " + d.Date);
+	  })
+
+	  // Run the data through crossfilter and load our 'facts'
+	  let facts = crossfilter(data)
+
+	  // Dimensions
+	  let crimeTypeDimension = facts.dimension(function(d) {
+  		return d.Type
+	  })
+
+	  let crimeTypeDataDimension = facts.dimension(function(d) {
+	  	return [d.Type, d3.timeDay(d.Date)]
+	  })
+
+	  // Groups
+	  let crimeTypeGroup = crimeTypeDimension.group()
+
+	  let crimeTypeDateGroup = crimeTypeDataDimension.group()
+
+	  // Charts
+
+	  // Bar Chart
+	  barChart.width(550)
+	  	.height(275)
+	  	.dimension(crimeTypeDimension)
+	  	.group(crimeTypeGroup)
+	  	.x(d3.scaleBand())
+	  	.xUnits(dc.units.ordinal)
+	  	.gap(56)
+	  	.elasticY(true)
+	  	.renderHorizontalGridLines(true)
+	  	.xAxisLabel("Crime Type")
+	  	.yAxisLabel("# of Crimes")
+	  	.colors(colorScale)
+	  	.colorAccessor(function(d) {
+	  		// console.log(d)
+	  		return d.key
+	  	})
+
+	  // Series Chart
+	  seriesChart.width(550)
+	  	.height(275)
+	  	.dimension(crimeTypeDataDimension)
+	  	.group(crimeTypeDateGroup)
+	  	.x(d3.scaleTime().domain(d3.extent(data, function(d) {
+	  		return d3.timeDay(d.Date)
+	  	})))
+	  	.elasticY(true)
+	  	.brushOn(false)
+	  	.renderHorizontalGridLines(true)
+	  	.xAxisLabel("Date")
+	  	.yAxisLabel("# of Crimes")
+	  	.legend(dc.legend().x(200).y(175).itemHeight(13).gap(5).horizontal(1).legendWidth(300).itemWidth(100))
+	  	.seriesAccessor(function(d) {
+	  		// console.log(d)
+	  		return d.key[0]
+	  	})
+	  	.keyAccessor(function(d) {
+	  		return d.key[1]
+	  	})
+	  	.valueAccessor(function(d) {
+	  		return d.value
+	  	})
+	  	.colors(colorScale)
+	  	.colorAccessor(function(d) {
+	  		d.key
+	  	})
+
+	  // Render the Charts
+	  dc.renderAll();
+
+	});
+	</script>
+	 <!-- Bootstrap javascript files -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+		
+</body>
+</html>
