@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title> Les Misérables Network</title>
+    
+    <link rel="stylesheet" href="css/reset.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+  </head>
+  <body>
+    <main role="main" class="container">
+      <header>
+      <h1>Les Misérables Network</h1>
+      </header>
+      <div id="main" role="main">
+        <div id="vis"></div>
+      </div>
+    </main> <!--! end of #container -->
+    <!-- Bootstrap javascript files -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
+    <script>
+        let sqrtScale = d3.scaleSqrt()
+                          .domain([0, 200])
+                          .range([0, 50])
+
+        const width = 960;
+        const height = 800;
+
+        const vis = d3.select("#vis")
+                      .append("svg")
+                      .attr("height", height)
+                      .attr("width", width)
+                      .attr("viewBox", [-width / 2, -height / 2, width, height])
+
+        d3.json("data/lesmiserables.json").then(function(graph) {
+          const nodes = graph.nodes
+          const links = graph.links
+
+          const simulation = forceSimulation(nodes, links).on("tick", ticked);
+
+          const link = vis.append("g")
+                          .selectAll("line")
+                          .data(links)
+                          .enter()
+                          .append("line")
+                          .attr("class", "link")
+
+          const node = vis.append("g")
+                          .selectAll("circle")
+                          .data(nodes)
+                          .enter()
+                          .append("circle")
+                          .attr("class", "node")
+                          .attr("r", function(d) {
+                            return sqrtScale(countLinks(d))
+                          })
+                          .attr("fill", function(d) {
+                            return getColor(d)
+                          })
+                          .call(drag(simulation));
+
+          function countLinks(node) {
+            let numberOfLinks = 0
+
+            links.forEach(function(link) {
+              if (node.id == link.source.id || node.id == link.target.id) {        
+                numberOfLinks++
+              }
+            })
+
+            return numberOfLinks
+          }
+
+          function getColor(node) {
+            let numberOfLinks_ = countLinks(node)
+
+            // >= 0 and < 10
+            let color_ = "#b2e2e2"
+
+            // >= 30
+            if (numberOfLinks_ >= 30) {
+              color_ = "#006d2c"
+
+            // >= 20
+            } else if (numberOfLinks_ >= 20) {
+              color_ = "#2ca25f"
+            
+            // >= 10
+            } else if (numberOfLinks_ >= 10) {
+              color_ = "#66c2a4"
+            }
+
+            return color_
+          }
+
+          function forceSimulation(nodes, links) {
+            return d3.forceSimulation(nodes)
+                     .force("link", d3.forceLink(links).id(d => d.id).distance(50))
+                     .force("charge", d3.forceManyBody().strength(-50).distanceMax(270))
+                     .force("center", d3.forceCenter());
+          }
+
+          function ticked() {
+            link.attr("x1", function(d) {
+              return d.source.x
+            })
+            link.attr("y1", function(d) {
+              return d.source.y
+            })
+            link.attr("x2", function(d) {
+              return d.target.x
+            })
+            link.attr("y2", function(d) {
+              return d.target.y
+            })
+
+            node.attr("cx", function(d) {
+              return d.x
+            })
+            node.attr("cy", function(d) {
+              return d.y
+            })
+            node.append("title")
+                .text(function(d) {
+                  return d.id + ": " + countLinks(d)
+                })
+          }
+
+          function drag(simulation) {
+            function dragstarted(d) {
+              if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+              d.fx = d.x;
+              d.fy = d.y;
+            }
+
+            function dragged(d) {
+              d.fx = d3.event.x;
+              d.fy = d3.event.y;
+            }
+
+            function dragended(d) {
+              if (!d3.event.active) simulation.alphaTarget(0);
+              d.fx = null;
+              d.fy = null;
+            }
+
+            return d3.drag()
+                     .on("start", dragstarted)
+                     .on("drag", dragged)
+                     .on("end", dragended);
+          }
+        })
+
+
+
+           
+
+
+           // create link svg elements
+
+
+           // create node svg elements
+
+           // define function ticked
+
+          // define function drag
+
+          // define the forceSimulation function that will receive nodes and links and 
+          // will return a d3.forceSimulation() object 
+    </script>
+  </body>
+</html>
