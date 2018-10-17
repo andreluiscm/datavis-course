@@ -79,9 +79,7 @@
 
           function getColor(node) {
             let numberOfLinks_ = countLinks(node)
-
-            // >= 0 and < 10
-            let color_ = "#b2e2e2"
+            let color_ = null
 
             // >= 30
             if (numberOfLinks_ >= 30) {
@@ -94,6 +92,10 @@
             // >= 10
             } else if (numberOfLinks_ >= 10) {
               color_ = "#66c2a4"
+            
+            // > 0 and < 10
+            } else { 
+              color_ = "#b2e2e2"
             }
 
             return color_
